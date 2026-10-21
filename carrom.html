@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrom — Two Player</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="carrom.css">
+</head>
+<body>
+<div class="game-container">
+  <h1>Carrom</h1>
+
+  <div class="scoreboard">
+    <div class="player-card" id="card-p1" data-testid="player-1">
+      <div class="player-name" id="name-p1">Player 1</div>
+      <div class="player-color-chip" id="chip-p1">White · Bottom</div>
+      <div class="score-row">
+        <span class="label">Score</span>
+        <span class="value" id="score-p1" data-testid="score-1">0</span>
+      </div>
+      <div class="score-row">
+        <span class="label">Coins Left</span>
+        <span class="value" id="coins-p1" data-testid="coins-remaining-1">9</span>
+      </div>
+    </div>
+
+    <div class="turn-zone" id="turn-zone">
+      <div class="turn-label" id="turn-label" data-testid="turn" aria-live="polite">Player 1's Turn</div>
+      <div class="queen-status" id="queen-status" data-testid="queen-status">Queen: On Board</div>
+    </div>
+
+    <div class="player-card" id="card-p2" data-testid="player-2">
+      <div class="player-name" id="name-p2">Player 2</div>
+      <div class="player-color-chip" id="chip-p2">Black · Top</div>
+      <div class="score-row">
+        <span class="label">Score</span>
+        <span class="value" id="score-p2" data-testid="score-2">0</span>
+      </div>
+      <div class="score-row">
+        <span class="label">Coins Left</span>
+        <span class="value" id="coins-p2" data-testid="coins-remaining-2">9</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="board-wrapper">
+    <canvas id="board" data-testid="board" width="600" height="600" aria-label="Carrom board. Player 1 shoots from the bottom; Player 2 shoots from the top."></canvas>
+  </div>
+  <p id="board-status" data-testid="board-status" role="status"></p>
+
+  <div class="controls">
+    <div class="power-container">
+      <label for="striker-position">Striker position: <span id="striker-position-value">300</span></label>
+      <input type="range" id="striker-position" data-testid="striker-position" min="80" max="520" value="300">
+    </div>
+    <div class="power-container">
+      <label for="power">Power: <span id="power-value" data-testid="power-value">50</span></label>
+      <input type="range" id="power" data-testid="power" min="1" max="100" value="50">
+    </div>
+    <div class="buttons">
+      <button id="btn-shoot" data-testid="shoot">Shoot</button>
+      <button id="btn-reset" data-testid="restart">Restart Game</button>
+    </div>
+    <p class="instructions">Click or drag on your highlighted baseline to slide the striker. Click or drag elsewhere to aim. The arrow shows the shot direction; it stays visible until you shoot. Set power, then click Shoot. The striker rebounds instead of entering pockets.</p>
+    <div id="message" data-testid="message" class="message" aria-live="polite"></div>
+  </div>
+
+  <div id="winner-panel" data-testid="winner-panel" class="winner-panel hidden" role="dialog" aria-modal="true" aria-labelledby="winner-text">
+    <h2 id="winner-text" data-testid="winner">Player 1 Wins!</h2>
+    <div id="winner-score" data-testid="final-scores"></div>
+    <button id="btn-restart" data-testid="play-again">Play Again</button>
+  </div>
+</div>
+<script src="carrom-rules.js"></script>
+<script src="carrom-physics.js"></script>
+<script src="carrom.js"></script>
+</body>
+</html>

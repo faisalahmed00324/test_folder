@@ -1,0 +1,243 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 700px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #e94560;
+}
+
+/* Scoreboard */
+.scoreboard {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.player-card {
+  background: #16213e;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 2px solid #0f3460;
+  text-align: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-card.active {
+  border-color: #e94560;
+  box-shadow: 0 0 12px rgba(233, 69, 96, 0.35);
+}
+
+.player-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.player-color-chip {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  display: inline-block;
+  background: #0f3460;
+  color: #aaa;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin: 4px 0;
+}
+
+.score-row .label {
+  color: #aaa;
+}
+
+.score-row .value {
+  font-weight: bold;
+  color: #fff;
+}
+
+#chip-p1 { color: #ffffff; box-shadow: 0 0 6px #ffffff; }
+#chip-p2 { color: #fff; background: #202026; border: 1px solid #888; }
+
+/* Turn zone */
+.turn-zone {
+  background: #0f3460;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  border: 2px solid #0f3460;
+}
+
+.turn-label {
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 6px;
+  color: #4ecdc4;
+}
+
+.queen-status {
+  font-size: 0.85rem;
+  color: #e94560;
+}
+
+.queen-status.pending {
+  color: #ffa500;
+  font-weight: bold;
+}
+
+/* Board */
+.board-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 20px auto;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  background: #2d3a4a;
+  cursor: crosshair;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+#board-status { text-align: center; color: #96dcd4; font-size: 0.9rem; }
+.instructions { margin: 0; line-height: 1.5; color: #bac7dd; font-size: 0.85rem; }
+button:focus-visible, input:focus-visible { outline: 3px solid #4ecdc4; outline-offset: 3px; }
+
+/* Controls */
+.controls {
+  background: #16213e;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.power-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.power-container label {
+  font-size: 0.9rem;
+  min-width: 70px;
+}
+
+.power-container input {
+  flex: 1;
+  min-width: 0;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  background: #e94560;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #ff5c77;
+}
+
+button:active {
+  background: #c0394e;
+}
+
+button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.winner-panel button { flex: none; width: 180px; }
+
+.message {
+  margin-top: 8px;
+  font-weight: bold;
+  color: #4ecdc4;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+.message.foul {
+  color: #ff6b6b;
+}
+
+/* Winner panel */
+.winner-panel {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  text-align: center;
+}
+
+.winner-panel.hidden {
+  display: none;
+}
+
+.winner-panel h2 {
+  color: #e94560;
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+#winner-score {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: #ddd;
+}
+
+@media (max-width: 650px) {
+  .game-container { padding: 12px; }
+  .scoreboard { flex-wrap: wrap; gap: 8px; }
+  .player-card { padding: 10px; }
+  .turn-zone { order: 3; flex-basis: 100%; }
+  .controls { padding: 12px; }
+}
