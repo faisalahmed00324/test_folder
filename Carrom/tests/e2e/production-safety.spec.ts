@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 const production = 'http://127.0.0.1:8878';
 
 test('production — no scenario API or driver is present, even with test-mode query flags', async ({ page, request }) => {
-  await page.goto(`${production}/carrom.html?test=true&e2e=true`);
+  await page.goto(`${production}/Carrom/carrom.html?test=true&e2e=true`);
   await expect(page.getByTestId('board')).toHaveAttribute('data-board-state', 'stationary');
   expect(await page.evaluate(() => typeof window.__carromTest)).toBe('undefined');
-  const source = await (await request.get(`${production}/carrom.js`)).text();
+  const source = await (await request.get(`${production}/Carrom/carrom.js`)).text();
   expect(source).not.toContain('__carromTest');
   expect(source).not.toContain('E2E_INJECTION_POINT');
-  for (const path of ['/tests/support/browser-driver.js', '/tests/support/server.cjs', '/inst.md']) {
+  for (const path of ['/Carrom/tests/support/browser-driver.js', '/Carrom/tests/server.cjs', '/Carrom/inst.md']) {
     expect((await request.get(`${production}${path}`)).status()).toBe(404);
   }
 });
@@ -17,7 +17,7 @@ test('production — no scenario API or driver is present, even with test-mode q
 test('production — actual build supports UI placement, aiming, shooting and opposite-side turn changes', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto(`${production}/carrom.html`);
+  await page.goto(`${production}/Carrom/carrom.html`);
   const board = page.getByTestId('board');
   const box = await board.boundingBox();
   if (!box) throw new Error('Board not visible');

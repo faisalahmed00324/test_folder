@@ -8,7 +8,9 @@ function build() {
   fs.mkdirSync(output, { recursive: true });
   for (const file of ASSETS) {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
-    fs.writeFileSync(path.join(output, file), source.replace('  // E2E_INJECTION_POINT\n', ''));
+    const destination = path.join(output, file);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, source.replace('  // E2E_INJECTION_POINT\n', ''));
   }
   return output;
 }

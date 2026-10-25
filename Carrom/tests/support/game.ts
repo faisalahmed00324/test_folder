@@ -70,7 +70,7 @@ export class Game {
   constructor(readonly page: Page) {}
 
   async open() {
-    await this.page.goto('/carrom.html');
+    await this.page.goto('/Carrom/carrom.html');
     await this.stationary();
   }
 

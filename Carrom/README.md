@@ -1,7 +1,7 @@
 # Two-player Carrom
 
-Open `carrom.html` directly in a browser, or run `npm start` and visit
-<http://127.0.0.1:8765/carrom.html>. No CDN, runtime dependency, or internet connection is needed to play.
+Open `Carrom/carrom.html` directly in a browser, or run `npm start` and visit
+<http://127.0.0.1:8765/Carrom/carrom.html>. No CDN, runtime dependency, or internet connection is needed to play.
 
 ## Controls
 
@@ -90,14 +90,14 @@ All waits use explicit completed-shot counts and stationary state, **not sleeps*
 
 ### Deterministic scenarios are test-only
 
-`tests/support/server.cjs` injects `tests/support/browser-driver.js` into a private
+`Carrom/tests/server.cjs` injects `Carrom/tests/support/browser-driver.js` into a private
 application closure **only in the test server's response**. It is never imported by the
 app or the production server. `load()` sets deterministic starting positions/history;
 `shot()` calls the production `beginShot`, `recordPocket`, and `recordFoul`, then the
 normal `finishShot`/`resolveShot`. It does not set winners/scores or duplicate rule logic.
 Real-interaction tests additionally run the normal physics loop through the UI.
 
-`npm run build` copies only the five public game assets to `dist/` and removes the inert
+`npm run build` copies only the five public game assets to `dist/Carrom/` and removes the inert
 injection comment. No driver, scenario code, test dependency, or test API is in the build.
 `node server.js --production` builds and serves this allowlist; requests for `tests/`
 or source documentation return 404. Query parameters cannot enable the test API.

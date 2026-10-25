@@ -1,4 +1,4 @@
-// Injected INSIDE the application closure, exclusively by tests/support/server.cjs.
+// Injected INSIDE the application closure, exclusively by Carrom/tests/server.cjs.
 // No scenario resolution is reimplemented here: use the production Rules and Physics.
 window.__carromTest = Object.freeze({
   snapshot() {

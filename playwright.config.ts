@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './Carrom/tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
@@ -17,13 +17,13 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'node tests/support/server.cjs',
-      url: 'http://127.0.0.1:8877/carrom.html',
+      command: 'node Carrom/tests/server.cjs',
+      url: 'http://127.0.0.1:8877/Carrom/carrom.html',
       reuseExistingServer: false,
     },
     {
       command: 'node server.js --production --port=8878',
-      url: 'http://127.0.0.1:8878/carrom.html',
+      url: 'http://127.0.0.1:8878/Carrom/carrom.html',
       reuseExistingServer: false,
     },
   ],

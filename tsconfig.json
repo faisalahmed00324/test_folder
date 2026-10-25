@@ -9,5 +9,5 @@
     "types": ["node", "@playwright/test"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["playwright.config.ts", "tests/**/*.ts"]
+  "include": ["playwright.config.ts", "Carrom/tests/**/*.ts"]
 }
