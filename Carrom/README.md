@@ -1,6 +1,6 @@
 # Two-player Carrom
 
-Open `Carrom/carrom.html` directly in a browser, or run `npm start` and visit
+Open `Carrom/carrom.html` directly in a browser, or run `yarn start` and visit
 <http://127.0.0.1:8765/Carrom/carrom.html>. No CDN, runtime dependency, or internet connection is needed to play.
 
 ## Controls
@@ -45,22 +45,33 @@ Each shot is resolved once, and only after all disk velocities are zero.
 The canvas exposes read-only `data-board-state` (`moving` / `stationary`) and
 `data-completed-shots`, plus a `carrom:shot-complete` event. These also support UI automation.
 
-## Playwright E2E tests (TypeScript)
+## Tests
 
-Requires Node.js 20 or later. In PowerShell, use `npm.cmd` / `npx.cmd` if execution
-policy blocks the PowerShell wrappers.
+Jest unit tests live in `tests/unit/` and exercise the production rules directly
+in Node. Run `yarn test:unit` or `yarn test:unit --coverage` from the repository
+root. The initial suite covers setup, invalid commands, placement, shot lifecycle,
+duplicate events, and same-shot queen coverage; it is not exhaustive physics or
+rules coverage. `yarn test` runs both unit and E2E suites, and `yarn check` also
+runs typechecking and the production build.
+
+### Playwright E2E tests (TypeScript)
+
+Requires Node.js 20 or later and Corepack (see the root README for setup).
+Run these commands from the repository root. In PowerShell, use `yarn.cmd` if
+execution policy blocks the PowerShell wrapper.
 
 ```text
-npm install
-npx playwright install chromium
-npm run typecheck
-npm test
+corepack enable
+yarn install
+yarn playwright install chromium
+yarn typecheck
+yarn test
 ```
 
 The config starts and stops dedicated servers at ports **8877** (instrumented tests)
 and **8878** (actual production build). It does not reuse the development server at 8765.
 Each test gets its own page and game; retries are disabled so failures are not hidden.
-View the HTML report with `npx playwright show-report`.
+View the HTML report with `yarn playwright show-report`.
 
 ### Sixteen core scenarios
 
@@ -97,7 +108,7 @@ app or the production server. `load()` sets deterministic starting positions/his
 normal `finishShot`/`resolveShot`. It does not set winners/scores or duplicate rule logic.
 Real-interaction tests additionally run the normal physics loop through the UI.
 
-`npm run build` copies only the five public game assets to `dist/Carrom/` and removes the inert
+`yarn build` copies only the five public game assets to `dist/Carrom/` and removes the inert
 injection comment. No driver, scenario code, test dependency, or test API is in the build.
 `node server.js --production` builds and serves this allowlist; requests for `tests/`
 or source documentation return 404. Query parameters cannot enable the test API.
