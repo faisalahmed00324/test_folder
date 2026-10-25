@@ -91,11 +91,13 @@ requires them. Preserve offline play and avoid CDN dependencies.
 - Browser-global legacy modules can be required in a Jest test and read from
   `globalThis`, as Carrom's rule tests demonstrate. This does not require changing
   their shipped browser interface.
-- Playwright currently discovers `Carrom/tests/e2e`. Add explicit discovery and
+- Playwright discovers `Carrom/tests/e2e` and `29_Card/tests/e2e`, with a private
+  test-only gateway host for card-table browser tests. Add explicit discovery and
   server setup for each new game's E2E tests; do not assume all games are covered.
-- Typechecking currently includes Playwright configuration and Carrom TypeScript
-  tests. Extend `tsconfig.json` when adding TypeScript source or another game.
-- Jest coverage currently includes Carrom rules and physics. Extend
+- Typechecking includes both games' tests and 29 Card TypeScript/TSX source.
+  Extend `tsconfig.json` when adding source or another game. React component tests
+  use Jest/jsdom and Testing Library; backend/domain tests stay in Node.
+- Jest coverage includes Carrom rules/physics and 29 Card TypeScript/TSX. Extend
   `collectCoverageFrom` as source is added; coverage is diagnostic, not proof of
   correct behavior or a substitute for meaningful assertions.
 

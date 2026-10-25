@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "../.build/29-card",
+    "types": ["node"],
+    "lib": ["ES2022"],
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/client"]
+}

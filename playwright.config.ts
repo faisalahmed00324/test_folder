@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './Carrom/tests/e2e',
+  testDir: '.',
+  testMatch: ['Carrom/tests/e2e/**/*.spec.ts', '29_Card/tests/e2e/**/*.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
@@ -24,6 +25,11 @@ export default defineConfig({
     {
       command: 'node server.js --production --port=8878',
       url: 'http://127.0.0.1:8878/Carrom/carrom.html',
+      reuseExistingServer: false,
+    },
+    {
+      command: 'corepack yarn build:engine && node 29_Card/tests/server.cjs',
+      url: 'http://127.0.0.1:8879/healthz',
       reuseExistingServer: false,
     },
   ],

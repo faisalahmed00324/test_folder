@@ -6,8 +6,9 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
+    "jsx": "react-jsx",
     "types": ["node", "@playwright/test"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["playwright.config.ts", "Carrom/tests/**/*.ts"]
+  "include": ["playwright.config.ts", "Carrom/tests/**/*.ts", "29_Card/src/**/*.ts", "29_Card/src/**/*.tsx", "29_Card/tests/**/*.ts"]
 }

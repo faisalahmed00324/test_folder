@@ -3,6 +3,7 @@ module.exports = {
   testMatch: ['<rootDir>/**/tests/unit/**/*.test.cjs'],
   clearMocks: true,
   restoreMocks: true,
-  collectCoverageFrom: ['Carrom/carrom-rules.js', 'Carrom/carrom-physics.js'],
+  transform: { '^.+\\.tsx?$': '<rootDir>/scripts/jest-typescript.cjs' },
+  collectCoverageFrom: ['Carrom/carrom-rules.js', 'Carrom/carrom-physics.js', '29_Card/src/**/*.{ts,tsx}'],
   coverageDirectory: 'coverage',
 };
