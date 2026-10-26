@@ -18,14 +18,14 @@ const { browserSeatToken } = require('../../src/client/invitation-form.ts');
 
 afterEach(() => { cleanup(); jest.useRealTimers(); history.replaceState(null, '', '/'); });
 describe('accessible private-table React controls', () => {
-  test('invitation fragments prefill a password field, are scrubbed, and never auto-connect', () => {
+  test('obsolete invitation fragments are scrubbed without exposing credentials or auto-connecting', () => {
     const token = 'I'.repeat(43);
     history.replaceState(null, '', `/29_Card/index.html#${new URLSearchParams({ invite: token, server: 'ws://127.0.0.1:8766/29-card/ws' })}`);
     const sockets = jest.spyOn(window, 'WebSocket');
     render(React.createElement(App));
     expect(location.hash).toBe('');
-    expect(screen.getByLabelText('Seat access token')).toHaveValue(token);
-    expect(screen.getByLabelText('Seat access token')).toHaveAttribute('type', 'password');
+    expect(screen.queryByLabelText('Seat access token')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Private table' })).toBeEnabled();
     expect(sockets).not.toHaveBeenCalled();
   });
   test('the credential adapter uses 32 cryptographic random bytes', () => {
@@ -83,11 +83,14 @@ describe('accessible private-table React controls', () => {
     expect(screen.queryByRole('region', { name: 'Your hand' })).not.toBeInTheDocument();
     expect(screen.getByText('Spectator · read only · Hand 1 · Deal 1')).toBeInTheDocument();
   });
-  test('join form uses labeled password input and describes the ready check', () => {
+  test('home opens create and join options without login or credentials', () => {
     render(React.createElement(App));
-    expect(screen.getByLabelText('Seat access token')).toHaveAttribute('type', 'password');
-    expect(screen.getByRole('button', { name: 'Join private table' })).toBeEnabled();
-    expect(screen.getByText(/All human players confirm readiness/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Private table' }));
+    expect(screen.getByRole('button', { name: 'Create table' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Join table' }));
+    expect(screen.getByLabelText('Six-digit PIN')).toHaveAttribute('inputmode', 'numeric');
+    expect(screen.getByText(/All four players confirm readiness/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Seat access token')).not.toBeInTheDocument();
   });
   test('every supported action has an explicit accessible label', () => {
     for (const action of [{ type: 'HOLD' }, { type: 'PASS' }, { type: 'DOUBLE' }, { type: 'REDOUBLE' },

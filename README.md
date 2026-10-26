@@ -6,23 +6,24 @@ the root URL currently opens Carrom as the default game.
 Twenty-Nine and Twenty-Eight are under development in [`29_Card/`](29_Card/README.md).
 The pure engine covers complete hands and matches. A server-runtime foundation adds
 secure shuffling, serialized commands, idempotency, and turn timers/time banks.
-An encrypted local journal and verified replay support restart recovery.
-An injectable WebSocket gateway adds authenticated routing, private traffic,
-bounded reconnect replay, and snapshot fallback. `corepack yarn start:29` runs a
-loopback-only private-table host with hashed expiring seat credentials and encrypted
-restart recovery. See the game README for private configuration and token setup.
-Persisted seat lifecycle adds disconnect grace, filtered-view bots, turn-boundary
-reclaim, and all-human abandonment. A playable React private-table preview is at
-`/29_Card/index.html`: run `corepack yarn build:ui`, then the static server, and
-connect using a host-provided WebSocket address and seat token. New tables use
-durable 15-second ready checks and 20-second unanimous rematch votes, including a
-fresh random dealer and reset scores/banks. Fixed-phrase quick chat includes a
-per-seat cooldown and local muting; the completed-result browser recovers recent
-table hands/matches from the encrypted journal. `corepack yarn invite:29` generates
-private invitation links for optional durable first-claim seating; guests see no
-game data before claiming, and owners keep separate reconnect credentials. Account
-integration, public seat management, matchmaking/parties, and account-wide player
-history remain unimplemented. See the game README before enabling invite mode.
+An injectable WebSocket gateway adds private seat routing, bounded reconnect
+replay, and snapshot fallback. `corepack yarn start:29` starts an ephemeral
+multi-table host at `http://127.0.0.1:8766`, without keys, configuration files,
+accounts, or saved history. Create a table to receive a six-digit PIN and the
+first seat; three friends join with that PIN and get the remaining seats
+automatically. Invisible random credentials keep each seat's private traffic
+separate; the shared PIN is not a reconnect credential.
+
+For the React table UI, run `corepack yarn build:ui`, `corepack yarn start`,
+and `corepack yarn start:29` in separate terminals, then open
+`http://127.0.0.1:8765/29_Card/index.html`. All four players must confirm the
+15-second ready check before dealing. Disconnect grace, filtered-view bots,
+turn-boundary reclaim, fixed-phrase quick chat, and unanimous rematches remain.
+Tables expire after six hours or ten minutes without connected players; restart
+discards all tables and credentials. No login, journal key, invitation link,
+manual token setup, or result-history persistence is required. The old encrypted
+private-server adapters remain internal legacy modules, not the default workflow.
+See the [game README](29_Card/README.md) for API and deployment limits.
 `yarn build:engine` compiles it to the private `.build/29-card/` directory;
 `yarn build` compiles it and bundles the React UI before copying allowlisted assets.
 

@@ -6,8 +6,6 @@
   "scripts": {
     "start": "node server.js",
     "start:29": "yarn build:engine && node .build/29-card/server.js",
-    "token:29": "yarn build:engine && node .build/29-card/server.js --generate-token",
-    "invite:29": "yarn build:engine && node .build/29-card/server.js --generate-invite",
     "build:ui": "node 29_Card/build-ui.cjs",
     "build": "yarn build:engine && node scripts/build.cjs",
     "build:engine": "tsc -p 29_Card/tsconfig.build.json",
