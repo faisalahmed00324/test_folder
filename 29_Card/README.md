@@ -123,9 +123,9 @@ deployments need their own trusted client-IP, connection-attempt, abuse, and
 resource limits: all proxied API clients otherwise share the proxy's IP window.
 SIGINT/SIGTERM stop admission, terminate sockets, stop actors, and close the host.
 
-The private E2E driver additionally starts `startPinServer` at `http://127.0.0.1:8880`
-with UI origin `http://127.0.0.1:8878`. Its old scenario tables on port 8879
-remain solely for legacy tests.
+The private E2E driver mounts `createPinTableService` on its shared gateway at
+`http://127.0.0.1:8879`, with UI origin `http://127.0.0.1:8878`. Its old
+scenario tables remain solely for legacy tests.
 
 ## Rules And Runtime
 

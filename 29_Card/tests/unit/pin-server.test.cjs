@@ -1,8 +1,9 @@
 const { describe, test, expect, afterEach, jest: mocks } = require('@jest/globals');
 const { once } = require('node:events');
-const { request } = require('node:http');
+const { request, createServer } = require('node:http');
 const { WebSocket } = require('ws');
-const { startPinServer, pinServerConfigSchema } = require('../../src/adapters/pin-server.ts');
+const { startPinServer, pinServerConfigSchema, createPinTableService } = require('../../src/adapters/pin-server.ts');
+const { createWebSocketGateway } = require('../../src/adapters/websocket-gateway.ts');
 const { tableCredentialsSchema } = require('../../src/protocol/private-tables.ts');
 
 const resources = [];
@@ -47,6 +48,30 @@ async function client(port, token) {
 }
 
 describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
+  test('embedding on a shared gateway exposes authentication without conflicting upgrade handlers', async () => {
+    let service;
+    const errors = [];
+    const server = createServer((req, res) => service.handle(req, res));
+    const gateway = createWebSocketGateway({ server, allowedOrigins: ['http://127.0.0.1:8765'],
+      authenticate: async token => service.authenticate(token), onError: error => errors.push(error) });
+    service = createPinTableService(server, {}, error => errors.push(error), gateway);
+    resources.push(async () => {
+      await gateway.close(); await service.close();
+      const closing = new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      server.closeAllConnections(); await closing;
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const port = server.address().port;
+    const created = await post(port);
+    expect(created.status).toBe(200);
+    expect(service.authenticate(created.body.token)).toMatchObject({ viewer: 0 });
+    const player = await client(port, created.body.token);
+    expect(await player.next('WELCOME')).toMatchObject({ viewer: 0 });
+    player.send({ type: 'GET_VIEW' });
+    expect((await player.next('SNAPSHOT')).snapshot.table.phase).toBe('WAITING');
+    expect(errors).toEqual([]);
+  });
+
   test('creates isolated tables, assigns four seats, protects cross-table commands, and exposes no history', async () => {
     const h = await host();
     const first = await post(h.port), second = await post(h.port);

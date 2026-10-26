@@ -26,12 +26,12 @@ export const pinServerConfigSchema = z.strictObject({
 });
 
 export function createPinTableService(server: import('node:http').Server, raw: unknown = {},
-  onError: (error: unknown) => void = () => {}) {
+  onError: (error: unknown) => void = () => {}, sharedGateway?: ReturnType<typeof createWebSocketGateway>) {
   const config = pinServerConfigSchema.parse(raw);
   let closed = false;
   const origins = new Set(config.allowedOrigins);
   const rates = new Map<string, { since: number; count: number }>();
-  const gateway = createWebSocketGateway({ server, allowedOrigins: config.allowedOrigins, onError,
+  const gateway = sharedGateway ?? createWebSocketGateway({ server, allowedOrigins: config.allowedOrigins, onError,
     authenticate: async token => tables.authenticate(token) });
   const tables = createPinTables(config, {
     now: nodeRuntime.now,
@@ -136,6 +136,7 @@ export function createPinTableService(server: import('node:http').Server, raw: u
   timer.unref();
   let closing: Promise<void> | undefined;
   return {
+    authenticate: tables.authenticate,
     handle(request: IncomingMessage, response: ServerResponse) {
       void handle(request, response).catch(error => {
         onError(error);
@@ -147,7 +148,7 @@ export function createPinTableService(server: import('node:http').Server, raw: u
       closed = true;
       closing ??= (async () => {
         clearInterval(timer); rates.clear();
-        await gateway.close();
+        if (!sharedGateway) await gateway.close();
         await tables.close();
       })();
       return closing;
