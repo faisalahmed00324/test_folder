@@ -23,6 +23,7 @@ async function harness(limits = {}, authenticate, lifecycle, table, lobby) {
       return null;
     }), onError: error => errors.push(error) });
   const records = [];
+  const lastPlayerDisconnects = [];
   let clock = 1000;
   const actor = createMatchActor({ matchId: 'test', ruleset: PRESETS['29-standard'], lifecycle, table }, {
     now: () => clock, firstDealer: () => 0, shuffle: createDeck,
@@ -30,7 +31,7 @@ async function harness(limits = {}, authenticate, lifecycle, table, lobby) {
     schedule: () => () => {}, append: async record => { records.push(record); },
     publish: (viewer, events) => gateway.publish('test', viewer, events), onError: error => errors.push(error),
   });
-  gateway.registerMatch('test', actor);
+  gateway.registerMatch('test', actor, at => lastPlayerDisconnects.push(at));
   await actor.start();
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -65,7 +66,8 @@ async function harness(limits = {}, authenticate, lifecycle, table, lobby) {
     commandId: `00000000-0000-4000-8000-${String(++id).padStart(12, '0')}`,
     matchId: 'test', expectedVersion: actor.getView(3).version, action, ...overrides,
   } });
-  return { actor, records, errors, gateway, connect, command, url, server, setTime: timestamp => { clock = timestamp; } };
+  return { actor, records, errors, gateway, connect, command, url, server, lastPlayerDisconnects,
+    setTime: timestamp => { clock = timestamp; } };
 }
 
 describe('authenticated WebSocket gateway integration', () => {
@@ -372,6 +374,28 @@ describe('authenticated WebSocket gateway integration', () => {
     expect(disconnected.events.map(event => event.event)).toEqual([{ type: 'PLAYER_DISCONNECTED', seat: 3 }]);
     expect(h.records.at(-1).lifecycleOperation).toEqual({ type: 'CONNECTION', seat: 3, connected: false });
     expect(h.errors).toEqual([]);
+  });
+
+  test('reports the timestamp when the final player disconnects', async () => {
+    const h = await harness({}, undefined, {});
+    const firstTransport = once(h.server, 'connection');
+    const first = await h.connect('seat3');
+    const [firstServerSocket] = await firstTransport;
+    const secondTransport = once(h.server, 'connection');
+    const second = await h.connect('seat2');
+    const [secondServerSocket] = await secondTransport;
+
+    const firstClosed = once(firstServerSocket, 'close');
+    first.socket.close();
+    await firstClosed;
+    expect(h.lastPlayerDisconnects).toEqual([]);
+
+    const secondClosed = once(secondServerSocket, 'close');
+    second.send({ type: 'LEAVE_TABLE' });
+    expect(await second.next('LEFT_TABLE')).toMatchObject({ type: 'LEFT_TABLE', matchId: 'test' });
+    await secondClosed;
+    expect(h.lastPlayerDisconnects).toHaveLength(1);
+    expect(h.lastPlayerDisconnects[0]).toEqual(expect.any(Number));
   });
 
   test('explicit leave hands control to a bot and authenticated reconnect waits for a boundary', async () => {
