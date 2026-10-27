@@ -24,14 +24,35 @@ describe('PIN private table entry', () => {
     expect(screen.queryByText('S'.repeat(43))).not.toBeInTheDocument();
   });
   test('joins using exactly six digits including a leading zero', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ pin: '012345', token: 'S'.repeat(43) }) });
+    global.fetch = jest.fn().mockImplementation((_url, options) => {
+      const { pin, attemptId } = JSON.parse(options.body);
+      return Promise.resolve({ ok: true, json: async () => ({ pin, token: attemptId }) });
+    });
     const joined = open();
     fireEvent.click(screen.getByRole('button', { name: 'Join table' }));
     fireEvent.change(screen.getByLabelText('Six-digit PIN'), { target: { value: '012345' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Join table' }).closest('form'));
     await waitFor(() => expect(joined).toHaveBeenCalledTimes(1));
-    expect(global.fetch.mock.calls[0][1].body).toBe('{"pin":"012345"}');
+    const request = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(request).toMatchObject({ pin: '012345', attemptId: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) });
     expect(global.fetch.mock.calls[0][0].pathname).toBe('/29-card/tables/join');
+  });
+  test('retries a join after a lost response with the same retained attempt identifier', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('response lost')).mockImplementationOnce((_url, options) => {
+      const { pin, attemptId } = JSON.parse(options.body);
+      return Promise.resolve({ ok: true, json: async () => ({ pin, token: attemptId }) });
+    });
+    const joined = open();
+    fireEvent.click(screen.getByRole('button', { name: 'Join table' }));
+    fireEvent.change(screen.getByLabelText('Six-digit PIN'), { target: { value: '012345' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Join table' }).closest('form'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach');
+    fireEvent.submit(screen.getByRole('button', { name: 'Join table' }).closest('form'));
+    await waitFor(() => expect(joined).toHaveBeenCalledTimes(1));
+    const first = JSON.parse(global.fetch.mock.calls[0][1].body);
+    const retry = JSON.parse(global.fetch.mock.calls[1][1].body);
+    expect(retry).toEqual(first);
+    expect(joined).toHaveBeenCalledWith(expect.objectContaining({ pin: '012345', token: first.attemptId }));
   });
   test.each(['12345', 'abcdef', '1234567'])('rejects invalid PIN %s without making a request', value => {
     global.fetch = jest.fn(); open();

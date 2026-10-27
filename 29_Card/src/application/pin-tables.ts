@@ -5,12 +5,14 @@ export type TableFailure = { status: 404 | 409 | 503; error: string };
 export type TableResult = { ok: true; credentials: TableCredentials } | { ok: false; failure: TableFailure };
 export type PinTableRuntime = {
   hasConnections(): boolean;
+  lastDisconnectedAt(): number;
   isClosed(): boolean;
   close(): Promise<void>;
 };
-type Table = { pin: string; matchId: string; expiresAt: number; lastActiveAt: number;
-  runtime: PinTableRuntime; hashes: string[] };
+type Table = { pin: string; matchId: string; expiresAt: number;
+  runtime: PinTableRuntime; hashes: string[]; attemptHashes: string[] };
 type Membership = { matchId: string; viewer: Seat; expiresAt: number };
+type JoinAttempt = { pin: string };
 
 export function createPinTables(settings: { maxTables: number; lifetimeMs: number; idleMs: number }, ports: {
   now(): number;
@@ -22,6 +24,7 @@ export function createPinTables(settings: { maxTables: number; lifetimeMs: numbe
 }) {
   const tables = new Map<string, Table>();
   const members = new Map<string, Membership>();
+  const attempts = new Map<string, JoinAttempt>();
   let tail: Promise<unknown> = Promise.resolve();
   let closed = false;
   const unavailable = (): TableResult => ({ ok: false, failure: { status: 503, error: 'Table capacity unavailable' } });
@@ -34,18 +37,20 @@ export function createPinTables(settings: { maxTables: number; lifetimeMs: numbe
   async function remove(table: Table) {
     tables.delete(table.pin);
     for (const hash of table.hashes) members.delete(hash);
+    for (const hash of table.attemptHashes) attempts.delete(hash);
     await table.runtime.close();
   }
   async function sweep() {
     const now = ports.now();
     for (const table of tables.values()) {
-      if (table.runtime.hasConnections()) table.lastActiveAt = now;
-      if (now >= table.expiresAt || now - table.lastActiveAt >= settings.idleMs || table.runtime.isClosed()) await remove(table);
+      const connected = table.runtime.hasConnections();
+      if (now >= table.expiresAt || (!connected &&
+          now - table.runtime.lastDisconnectedAt() >= settings.idleMs) || table.runtime.isClosed()) await remove(table);
     }
   }
-  function claim(table: Table): TableResult {
-    for (let attempt = 0; attempt < 32; attempt++) {
-      const token = ports.newToken();
+  function claim(table: Table, retainedToken?: string): TableResult {
+    for (let attempt = 0; attempt < (retainedToken ? 1 : 32); attempt++) {
+      const token = retainedToken ?? ports.newToken();
       const hash = ports.hash(token);
       if (members.has(hash)) continue;
       const viewer = table.hashes.length as Seat;
@@ -70,21 +75,33 @@ export function createPinTables(settings: { maxTables: number; lifetimeMs: numbe
         const matchId = ports.newId();
         const runtime = await ports.open(matchId);
         const now = ports.now();
-        const table: Table = { pin, matchId, expiresAt: now + settings.lifetimeMs, lastActiveAt: now, runtime, hashes: [] };
+        const table: Table = { pin, matchId, expiresAt: now + settings.lifetimeMs,
+          runtime, hashes: [], attemptHashes: [] };
         tables.set(pin, table);
         const result = claim(table);
         if (!result.ok) await remove(table);
         return result;
       });
     },
-    join(pin: string): Promise<TableResult> {
+    join(pin: string, attemptId: string): Promise<TableResult> {
       return serialize(async () => {
         if (closed) return unavailable();
         await sweep();
         const table = tables.get(pin);
         if (!table) return { ok: false, failure: { status: 404, error: 'Table not found' } };
+        const attemptHash = ports.hash(attemptId);
+        const previous = attempts.get(attemptHash);
+        if (previous) {
+          if (previous.pin !== pin) return { ok: false, failure: { status: 409, error: 'Join attempt already used' } };
+          return { ok: true, credentials: { pin, token: attemptId } };
+        }
         if (table.hashes.length >= 4) return { ok: false, failure: { status: 409, error: 'Table is full' } };
-        return claim(table);
+        const result = claim(table, attemptId);
+        if (result.ok) {
+          attempts.set(attemptHash, { pin });
+          table.attemptHashes.push(attemptHash);
+        }
+        return result;
       });
     },
     authenticate(token: string): Membership | null {
@@ -97,7 +114,7 @@ export function createPinTables(settings: { maxTables: number; lifetimeMs: numbe
       closed = true;
       return serialize(async () => {
         const pending = [...tables.values()];
-        tables.clear(); members.clear();
+        tables.clear(); members.clear(); attempts.clear();
         await Promise.all(pending.map(table => table.runtime.close()));
       });
     },

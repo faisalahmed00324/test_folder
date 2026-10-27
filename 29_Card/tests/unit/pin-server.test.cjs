@@ -127,11 +127,16 @@ describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
     expect(first.body.pin).not.toBe(second.body.pin);
     expect(first.body.token).not.toBe(second.body.token);
     const credentials = [first.body];
-    for (let i = 0; i < 3; i++) {
-      const result = await post(h.port, '/29-card/tables/join', { pin: first.body.pin });
+    const firstAttempt = 'A'.repeat(43);
+    const firstJoin = await post(h.port, '/29-card/tables/join', { pin: first.body.pin, attemptId: firstAttempt });
+    const retry = await post(h.port, '/29-card/tables/join', { pin: first.body.pin, attemptId: firstAttempt });
+    expect(retry).toMatchObject({ status: 200, body: firstJoin.body });
+    credentials.push(firstJoin.body);
+    for (const attemptId of ['B'.repeat(43), 'C'.repeat(43)]) {
+      const result = await post(h.port, '/29-card/tables/join', { pin: first.body.pin, attemptId });
       expect(result.status).toBe(200); credentials.push(result.body);
     }
-    expect((await post(h.port, '/29-card/tables/join', { pin: first.body.pin })).status).toBe(409);
+    expect((await post(h.port, '/29-card/tables/join', { pin: first.body.pin, attemptId: 'D'.repeat(43) })).status).toBe(409);
     const players = [];
     let matchId;
     for (const [viewer, entry] of credentials.entries()) {
@@ -174,14 +179,15 @@ describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
   test('strict HTTP boundaries reject malformed JSON, PINs, seat choices, large bodies, and unknown paths', async () => {
     const h = await host();
     for (const body of ['{', 'null', '[]', { seat: 0 }]) expect((await post(h.port, undefined, body)).status).toBe(400);
-    for (const body of [{}, { pin: 123456 }, { pin: '12345' }, { pin: '123456', seat: 1 }]) {
+    for (const body of [{}, { pin: 123456, attemptId: 'A'.repeat(43) }, { pin: '12345', attemptId: 'A'.repeat(43) },
+      { pin: '123456' }, { pin: '123456', attemptId: 'short' }, { pin: '123456', attemptId: 'A'.repeat(43), seat: 1 }]) {
       expect((await post(h.port, '/29-card/tables/join', body)).status).toBe(400);
     }
     expect((await post(h.port, undefined, { padding: 'x'.repeat(2048) })).status).toBe(400);
     expect((await post(h.port, undefined, {}, { 'Content-Type': 'text/plain' })).status).toBe(400);
     expect((await post(h.port, undefined, {}, {}, 'GET')).status).toBe(400);
     expect((await post(h.port, '/unknown')).status).toBe(404);
-    expect((await post(h.port, '/29-card/tables/join', { pin: '999999' })).status).toBe(404);
+    expect((await post(h.port, '/29-card/tables/join', { pin: '999999', attemptId: 'A'.repeat(43) })).status).toBe(404);
     expect(h.errors).toEqual([]);
   });
 
@@ -205,7 +211,7 @@ describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
 
   test('IP rate windows bound requests including failed PIN guesses; configuration is validated', async () => {
     const h = await host({ requestsPerWindow: 2, maxRateEntries: 1 });
-    expect((await post(h.port, '/29-card/tables/join', { pin: '999999' })).status).toBe(404);
+    expect((await post(h.port, '/29-card/tables/join', { pin: '999999', attemptId: 'A'.repeat(43) })).status).toBe(404);
     expect((await post(h.port)).status).toBe(200);
     const limited = await post(h.port);
     expect(limited.status).toBe(429);
@@ -222,7 +228,7 @@ describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
     const h = await host({ maxRateEntries: 1, requestsPerWindow: 1 });
     let now = Date.now();
     mocks.spyOn(Date, 'now').mockImplementation(() => now);
-    const guess = () => post(h.port, '/29-card/tables/join', { pin: '999999' });
+    const guess = () => post(h.port, '/29-card/tables/join', { pin: '999999', attemptId: 'A'.repeat(43) });
     expect((await guess()).status).toBe(404);
     expect((await guess()).status).toBe(429);
     now += 60_001;

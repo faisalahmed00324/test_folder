@@ -13,7 +13,13 @@ export function PrivateTables({ onJoin }: { onJoin(access: { endpoint: string; p
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const request = useRef<AbortController | null>(null);
+  const joinAttempts = useRef(new Map<string, string>());
   useEffect(() => () => request.current?.abort(), []);
+
+  function newJoinAttemptId() {
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
 
   async function enter(create: boolean) {
     if (request.current) return;
@@ -29,17 +35,33 @@ export function PrivateTables({ onJoin }: { onJoin(access: { endpoint: string; p
       url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
       url.pathname = create ? '/29-card/tables' : '/29-card/tables/join';
       url.search = ''; url.hash = '';
+      let attemptId: string | undefined;
+      const attemptKey = JSON.stringify([address, pin]);
+      if (!create) {
+        attemptId = joinAttempts.current.get(attemptKey);
+        if (!attemptId) {
+          attemptId = newJoinAttemptId();
+          if (joinAttempts.current.size >= 16) {
+            const oldest = joinAttempts.current.keys().next().value;
+            if (oldest) joinAttempts.current.delete(oldest);
+          }
+          joinAttempts.current.set(attemptKey, attemptId);
+        }
+      }
       const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(create ? {} : { pin }), signal: controller.signal, credentials: 'omit', cache: 'no-store' });
+        body: JSON.stringify(create ? {} : { pin, attemptId }), signal: controller.signal, credentials: 'omit', cache: 'no-store' });
       if (!response.ok) {
         const messages: Record<number, string> = { 400: 'Enter exactly six digits.', 404: 'Table not found or expired. Check the PIN.',
-          409: 'This table is full. Only four players can join.', 429: 'Too many attempts. Please try again shortly.',
+          409: 'This table is full or the join attempt is no longer valid.', 429: 'Too many attempts. Please try again shortly.',
           503: 'Tables are temporarily unavailable. Please try again later.' };
         setError(messages[response.status] ?? 'Unable to enter the table. Please try again.'); return;
       }
       const parsed = tableCredentialsSchema.safeParse(await response.json());
-      if (!parsed.success || (!create && parsed.data.pin !== pin)) { setError('The table server returned an invalid response.'); return; }
+      if (!parsed.success || (!create && (parsed.data.pin !== pin || parsed.data.token !== attemptId))) {
+        setError('The table server returned an invalid response.'); return;
+      }
       if (controller.signal.aborted) return;
+      if (!create) joinAttempts.current.delete(attemptKey);
       onJoin({ endpoint: address, ...parsed.data });
     } catch {
       if (request.current === controller) setError('Cannot reach the table server. Check your connection and try again.');

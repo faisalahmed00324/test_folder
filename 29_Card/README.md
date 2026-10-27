@@ -37,10 +37,13 @@ from a file URL. Keep the static server and card backend running separately.
 
 ## Temporary Tables And Privacy
 
-- The six-digit PIN is only a shared table locator. Each successful create/join
-  returns a different random 256-bit seat credential; only its SHA-256 digest
-  remains in the membership map. The UI uses the credential invisibly in `HELLO`,
-  never as a URL query parameter. Do not log API responses or WebSocket credentials.
+- The six-digit PIN is only a shared table locator. Create returns a random
+  256-bit seat credential. Join uses a client-generated 256-bit attempt identifier
+  as its seat credential, so retrying the same request recovers the same reservation;
+  only its SHA-256 digest remains in the membership map. The UI retains the attempt
+  identifier in memory until a successful response and uses the credential invisibly
+  in `HELLO`, never as a URL query parameter. Do not log API requests, responses, or
+  WebSocket credentials.
 - Each table has exactly four reservations, including its creator. A full table
   rejects additional joiners; disconnect/leave does not transfer or release a
   reservation. A still-running client can reconnect with its in-memory credential.
@@ -73,7 +76,7 @@ the static server's port. Shared Zod boundaries are in
 | Method/path | JSON request | Successful JSON response |
 | --- | --- | --- |
 | `POST /29-card/tables` | `{}` | `{ "pin": "012345", "token": "<seat credential>" }` |
-| `POST /29-card/tables/join` | `{ "pin": "012345" }` | `{ "pin": "012345", "token": "<seat credential>" }` |
+| `POST /29-card/tables/join` | `{ "pin": "012345", "attemptId": "<43-char base64url secret>" }` | `{ "pin": "012345", "token": "<same attemptId>" }` |
 
 Success is HTTP 200. PINs are strings matching `/^\d{6}$/`, including leading
 zeros. Requests require `Content-Type: application/json` and at most 1 KiB.
@@ -82,7 +85,7 @@ Errors are JSON `{ "error": "<public message>" }`:
 - 400: invalid request, content type, JSON, PIN, or oversized body.
 - 403: disallowed browser origin.
 - 404: missing/expired table or unknown path.
-- 409: all four seats reserved.
+- 409: all four seats reserved or a join attempt was reused for another PIN.
 - 429: IP request limit reached.
 - 503: table capacity unavailable, shutdown, or service failure.
 

@@ -46,16 +46,20 @@ export function createPinTableService(server: import('node:http').Server, raw: u
         ...nodeRuntime, append: async () => {},
         publish: (viewer, events) => gateway.publish(matchId, viewer, events), onError,
       });
+      let lastDisconnectedAt: number;
       try {
         await actor.start();
+        lastDisconnectedAt = nodeRuntime.now();
         gateway.registerMatch(matchId, { ...actor, getHistory: () =>
-          ({ entries: [], nextBefore: null, earliestAvailable: null, total: 0, truncated: false }) });
+          ({ entries: [], nextBefore: null, earliestAvailable: null, total: 0, truncated: false }) },
+          at => { lastDisconnectedAt = at; });
       } catch (error) { await actor.shutdown(); throw error; }
       return {
         hasConnections: () => {
           try { return actor.getView('spectator').seats?.some(seat => seat.connected) ?? false; }
           catch { return false; }
         },
+        lastDisconnectedAt: () => lastDisconnectedAt,
         isClosed: () => {
           try { return actor.getView('spectator').table?.phase === 'CLOSED'; }
           catch { return true; }
@@ -130,7 +134,7 @@ export function createPinTableService(server: import('node:http').Server, raw: u
     } else {
       const parsed = joinTableRequestSchema.safeParse(body);
       if (!parsed.success) { json(response, 400, { error: 'Invalid request' }); return; }
-      result = await tables.join(parsed.data.pin);
+      result = await tables.join(parsed.data.pin, parsed.data.attemptId);
     }
     if (result.ok) json(response, 200, result.credentials);
     else json(response, result.failure.status, { error: result.failure.error });

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 export const tablePinSchema = z.string().regex(/^\d{6}$/);
+export const joinAttemptIdSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 export const createTableRequestSchema = z.strictObject({});
-export const joinTableRequestSchema = z.strictObject({ pin: tablePinSchema });
+export const joinTableRequestSchema = z.strictObject({ pin: tablePinSchema, attemptId: joinAttemptIdSchema });
 export const tableCredentialsSchema = z.strictObject({
   pin: tablePinSchema,
   token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),

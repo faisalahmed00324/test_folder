@@ -38,7 +38,8 @@ type Session = z.infer<typeof sessionSchema>;
 type Rate = { since: number; count: number };
 type Connection = { socket: WebSocket; session?: Session; pending: number; missed: number; rate: Rate;
   expiryTimer?: ReturnType<typeof setTimeout>; lobbyFingerprint?: string };
-type Table = { actor: Actor; buffers: Map<Viewer, RuntimeEvent[]>; rates: Map<Viewer, Rate>; commands: number };
+type Table = { actor: Actor; buffers: Map<Viewer, RuntimeEvent[]>; rates: Map<Viewer, Rate>; commands: number;
+  onLastPlayerDisconnected?: (at: number) => void };
 
 // Attach only to a private Node host. TLS and identity/token issuance belong to
 // the host; authentication must verify membership, not decode client seat claims.
@@ -57,13 +58,24 @@ export function createWebSocketGateway(options: {
   const connections = new Set<Connection>();
   let closed = false;
 
+  function notifyLastPlayerDisconnected(matchId: string) {
+    const hasConnectedPlayer = [...connections].some(connection => {
+      const session = connection.session;
+      return session?.matchId === matchId && session.viewer !== 'spectator' && session.viewer !== 'guest';
+    });
+    if (!hasConnectedPlayer) tables.get(matchId)?.onLastPlayerDisconnected?.(Date.now());
+  }
+
   function disconnect(connection: Connection) {
     const session = connection.session;
     connection.session = undefined;
     clearTimeout(connection.expiryTimer);
     if (!session || session.viewer === 'spectator' || session.viewer === 'guest' || closed) return;
     const table = tables.get(session.matchId);
-    if (table) void table.actor.setConnected(session.viewer, false).catch(options.onError);
+    if (table) {
+      void table.actor.setConnected(session.viewer, false).catch(options.onError);
+      notifyLastPlayerDisconnected(session.matchId);
+    }
   }
   function send(connection: Connection, message: unknown) {
     const { socket } = connection;
@@ -188,6 +200,7 @@ export function createWebSocketGateway(options: {
         await table.actor.leave(viewer);
         connection.session = undefined;
         clearTimeout(connection.expiryTimer);
+        notifyLastPlayerDisconnected(matchId);
         send(connection, { type: 'LEFT_TABLE', matchId });
         connection.socket.close(1000, 'Left table');
         return;
@@ -252,10 +265,10 @@ export function createWebSocketGateway(options: {
   };
   options.server.on('upgrade', upgrade);
   return {
-    registerMatch(matchId: string, actor: Actor) {
+    registerMatch(matchId: string, actor: Actor, onLastPlayerDisconnected?: (at: number) => void) {
       matchIdSchema.parse(matchId);
       if (closed || tables.has(matchId)) throw new Error('Gateway closed or match already registered');
-      tables.set(matchId, { actor, buffers: new Map(), rates: new Map(), commands: 0 });
+      tables.set(matchId, { actor, buffers: new Map(), rates: new Map(), commands: 0, onLastPlayerDisconnected });
     },
     publish(matchId: string, viewer: Viewer, events: readonly RuntimeEvent[]) {
       const table = tables.get(matchId);
