@@ -52,8 +52,14 @@ export function createPinTableService(server: import('node:http').Server, raw: u
           ({ entries: [], nextBefore: null, earliestAvailable: null, total: 0, truncated: false }) });
       } catch (error) { await actor.shutdown(); throw error; }
       return {
-        hasConnections: () => actor.getView('spectator').seats?.some(seat => seat.connected) ?? false,
-        isClosed: () => actor.getView('spectator').table?.phase === 'CLOSED',
+        hasConnections: () => {
+          try { return actor.getView('spectator').seats?.some(seat => seat.connected) ?? false; }
+          catch { return false; }
+        },
+        isClosed: () => {
+          try { return actor.getView('spectator').table?.phase === 'CLOSED'; }
+          catch { return true; }
+        },
         close: async () => { gateway.unregisterMatch(matchId); await actor.shutdown(); },
       };
     },

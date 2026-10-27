@@ -72,6 +72,53 @@ describe('PIN HTTP/WebSocket integration without keys or persistence', () => {
     expect(errors).toEqual([]);
   });
 
+  test('unavailable actors are retired without interrupting cleanup of later tables', async () => {
+    let unavailable = false;
+    const actors = [];
+    const actorModule = require('../../src/application/match-actor.ts');
+    const createActor = mocks.spyOn(actorModule, 'createMatchActor').mockImplementation(() => {
+      const actor = {
+        start: async () => {},
+        shutdown: mocks.fn(async () => {}),
+        getView: () => {
+          if (unavailable) throw new Error('Match actor unavailable');
+          return { seats: [{ connected: false }], table: { phase: 'WAITING' } };
+        },
+        getHistory: () => ({ entries: [], nextBefore: null, earliestAvailable: null, total: 0, truncated: false }),
+        getSequence: () => 0,
+        dispatch: async () => {},
+        setConnected: async () => {},
+        leave: async () => {},
+      };
+      actors.push(actor);
+      return actor;
+    });
+    const server = createServer();
+    const gateway = {
+      publish: mocks.fn(),
+      registerMatch: mocks.fn(),
+      unregisterMatch: mocks.fn(),
+    };
+    const service = createPinTableService(server, {}, () => {}, gateway);
+    server.on('request', (req, res) => service.handle(req, res));
+    resources.push(async () => {
+      await service.close();
+      const closing = new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      server.closeAllConnections(); await closing;
+      createActor.mockRestore();
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const port = server.address().port;
+
+    expect((await post(port)).status).toBe(200);
+    expect((await post(port)).status).toBe(200);
+    unavailable = true;
+    expect((await post(port)).status).toBe(200);
+    expect(actors).toHaveLength(3);
+    expect(actors[0].shutdown).toHaveBeenCalledTimes(1);
+    expect(actors[1].shutdown).toHaveBeenCalledTimes(1);
+  });
+
   test('creates isolated tables, assigns four seats, protects cross-table commands, and exposes no history', async () => {
     const h = await host();
     const first = await post(h.port), second = await post(h.port);
